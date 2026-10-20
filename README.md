@@ -1,87 +1,202 @@
-# **UNDER CONSTRUCTION**
+# Redis & Caching Seminar Demo
 
-# Install Prerequisites
+This project is a FastAPI demonstration of SQLite queries, Redis caching,
+Memcached caching, and Redis-backed session storage.
 
-a. Python (3.8 or newer): Download from python.org.
+## Prerequisites
 
-b. Visual Studio Code (VS Code): Download from code.visualstudio.com. (For convenience's sake)
+- Python 3.9 or newer
+- Docker Desktop with Docker Compose
+- Visual Studio Code (optional)
 
-c. Docker Desktop: Download from docker.com.
+## Part 1: Local setup (at home)
 
-## 1. Extract and Open the Project(There will be three files)
+Use this section to install and test the complete demo locally before the
+seminar. From the project directory:
 
-## 2. Open Visual Studio Code.
+1. Create and activate a virtual environment.
 
-## 3. Go to File > Open Folder... and select the extracted folder.
+   **Windows PowerShell**
 
-## 4. Open the integrated terminal in VS Code by going to Terminal > New Terminal.
+   ```powershell
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   ```
 
-## 5. Set Up the Python Environment
+   **macOS/Linux**
 
-a.Create the virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
 
-```bash
-python -m venv .venv
-```
+2. Install the Python dependencies.
 
-b.Activate the virtual environment:
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
 
-b1.For Windows:
+3. Start Redis and Memcached. RedisInsight is also started for inspecting
+   Redis data locally.
 
-```bash
-.venv\Scripts\activate
-```
+   ```bash
+   docker compose up -d
+   ```
 
-b2.For macOS/Linux:
+4. Start the FastAPI application.
 
-```bash
-source .venv/bin/activate
-```
+   ```bash
+   python -m uvicorn main:app --reload
+   ```
 
-c.Install the dependencies:
+   On startup, the application creates and seeds `demo.db` with up to
+   500,000 users. The initial startup can take a few seconds.
 
-```bash
-pip install -r requirements.txt
-```
+5. Open the interactive API documentation at
+   [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-## 6. Start the Redis Server
+6. Open RedisInsight at [http://127.0.0.1:5540](http://127.0.0.1:5540).
 
-*Ensure Docker Desktop is running, then execute the following command in the terminal:
+7. Add the Redis Database by going to the Connection Settings
 
-```bash
-docker compose up -d
-```
+8. Change the host field into redis then Add the Redis Database
 
-## 7. Run the FastAPI Server
+9. Select the newly added database to monitor/add/edit keys for your cached data
 
-a.In the terminal, execute:
+The local services use these ports:
 
-```bash
-uvicorn main:app --reload
-```
+| Service | Address |
+| --- | --- |
+| FastAPI | `http://127.0.0.1:8000` |
+| Redis | `localhost:6379` |
+| RedisInsight | `http://127.0.0.1:5540` |
+| Memcached | `localhost:11211` |
 
-b.Wait until the terminal outputs that the database is seeded and the application is running on http://127.0.0.1:8000.
+## Part 2: Live seminar demonstration (Ngrok)
 
-## 8. Test the Application
+In the live demonstration, the presenter will run the API, Redis, Memcached, and
+RedisInsight on the presentation computer. Ngrok exposes only the FastAPI
+application so attendees can use the public Swagger UI while the presenter
+shows RedisInsight locally.
 
-a. Go to http://127.0.0.1:8000/docs for the interactive SwaggerUI
+### Before the seminar
 
-b. Test the search_users_slow with a number and checks the db_time_ms
+(incase if the original presenter couldn't make it)
+1. Install Ngrok and authenticate it with an Ngrok account. Follow the
+   current instructions at [ngrok.com](https://ngrok.com/).
+2. Confirm that Docker Desktop is running.
+3. Start Redis, Memcached, and RedisInsight:
 
-c. Test the search_users_fast with the same number and checks the db_time_ms(Cache Miss)
+   ```bash
+   docker compose up -d
+   ```
 
-d. Test again and see how drastically fast the redis method returns(Cache Hit)
+4. Start the FastAPI application:
 
-## 9. Shutdown and Cleanup
+   ```bash
+   python -m uvicorn main:app
+   ```
 
-*When finished, follow these steps to stop the application and clean up the environment:
+5. In a second terminal, expose the local FastAPI port:
 
-a. Stop the FastAPI server by clicking into the VS Code terminal and pressing Ctrl + C.
+   ```bash
+   ngrok http 8000
+   ```
 
-b. Stop and remove the Redis Docker container by running:
+   Ngrok displays a forwarding URL similar to
+   `https://example.ngrok-free.app`.
+
+6. Share only the Swagger UI URL with attendees:
+   `https://example.ngrok-free.app/docs`.
+
+Do **not** expose Redis port `6379`, Memcached port `11211`, or RedisInsight
+port `5540` through Ngrok. RedisInsight should remain open only on the
+presenter's computer at `http://127.0.0.1:5540`.
+
+The public URL changes when the Ngrok tunnel is restarted unless a reserved
+Ngrok domain is configured. Anyone with the public URL can call these demo
+endpoints while the tunnel is running, so stop Ngrok after the presentation.
+
+### Live demonstration flow
+
+The examples below use the public Ngrok URL. Replace
+`https://example.ngrok-free.app` with the URL shown by your Ngrok terminal.
+The `cache` field identifies whether the request bypassed the cache, populated
+it, or used a cached value. Cache entries expire after 60 seconds.
+
+### Level 1: Small payloads (count search)
+
+**Endpoints**
+
+- `GET /demo/level1/nocache/{keyword}` — query SQLite directly
+- `GET /demo/level1/cached/{keyword}` — query Redis after a cache miss
+
+**Try it**
+
+1. Open `https://example.ngrok-free.app/docs`.
+2. Call `GET /demo/level1/nocache/User` and note `time_ms`.
+3. Call `GET /demo/level1/cached/User`. The first request should report
+   `cache: "MISS"`.
+4. Call it again within 60 seconds. It should report `cache: "HIT"` and
+   generally be faster.
+
+### Level 2: Large payloads (up to 10,000 records)
+
+**Endpoints**
+
+- `GET /demo/level2/nocache/{keyword}` — query SQLite directly
+- `GET /demo/level2/cached/{keyword}` — cache the JSON result in Redis
+- `GET /demo/level2/memcached/{keyword}` — cache the JSON result in Memcached
+
+The database query returns at most 10,000 matching records; it can return
+fewer if the keyword has fewer matches. Timing depends on the machine and
+should be used for relative comparisons, not as a fixed benchmark.
+
+**Try it**
+
+1. Call `/demo/level2/nocache/1`.
+2. Call `/demo/level2/cached/1` twice and compare the `MISS` and `HIT` responses.
+3. Call `/demo/level2/memcached/1` twice and compare its `MISS` and `HIT`
+   responses with Redis.
+4. In the presenter's RedisInsight window, inspect the `level2:data:*` keys
+   created by the Redis example and refresh the view after each request.
+
+### Level 3: Session management with Redis hashes
+
+**Endpoints**
+
+- `POST /demo/level3/login/{username}` — creates a Redis hash session
+- `GET /demo/level3/profile/{session_token}` — reads the session hash
+
+Sessions expire after 30 minutes.
+
+**Try it**
+
+1. Call `POST /demo/level3/login/Alice` and copy the returned
+   `session_token`.
+2. Call `GET /demo/level3/profile/{session_token}` using that token.
+3. Try an invalid or expired token. The endpoint returns HTTP
+   `401 Unauthorized`, because the request is not authenticated.
+4. In RedisInsight, inspect the corresponding `session:{session_token}` hash
+   and its expiration.
+
+### End the live demo
+
+1. Stop Ngrok with `Ctrl+C` so the public Swagger URL no longer works.
+2. Stop the FastAPI server with `Ctrl+C`.
+3. Stop the containers:
+
+   ```bash
+   docker compose down
+   ```
+
+## Stop a local practice session
+
+Stop the FastAPI server with `Ctrl+C`, then stop the containers:
 
 ```bash
 docker compose down
 ```
 
-## 10. Close Visual Studio Code and Docker Desktop.
+The generated `demo.db` file remains locally so later runs can reuse the
+seeded database.
