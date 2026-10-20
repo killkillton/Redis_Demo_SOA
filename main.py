@@ -1,14 +1,19 @@
+import json
 import sqlite3
 import time
+import uuid
 from contextlib import asynccontextmanager
-import json
+
 import redis
 from fastapi import FastAPI
-import uuid
+from pymemcache.client.base import Client as MemcacheClient
 
 time_to_expire = 60
 users_amount=500000
 redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+memcached_client = MemcacheClient(('localhost', 11211))
+
+
 def setup_database():
     conn = sqlite3.connect("demo.db")
     cursor = conn.cursor()
@@ -32,6 +37,7 @@ async def lifespan(app: FastAPI):
     setup_database()
     yield
     redis_client.close()
+    memcached_client.close()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -52,8 +58,8 @@ def search_users_slow(keyword: str):
     return {
         "payload_size": f"Small ({match_count} matches)",
         "time_ms": time_ms,
-        "data": match_count,
-        "cache": "BYPASS"
+        "cache": "BYPASS",
+        "data": match_count
     }
 
 @app.get("/demo/level1/cached/{keyword}")
@@ -66,8 +72,8 @@ def search_users_fast(keyword: str):
         return {
             "payload_size": f"Small ({int(cached_result)} matches)",
             "time_ms": time_ms,
-            "data": int(cached_result),
-            "cache": "HIT"
+            "cache": "HIT",
+            "data": int(cached_result)
         }
 
     match_count = perform_small_db_query(keyword)
@@ -76,8 +82,8 @@ def search_users_fast(keyword: str):
     return {
         "payload_size": f"Small ({match_count} matches)",
         "time_ms": time_ms,
-        "data": match_count,
-        "cache": "MISS"
+        "cache": "MISS",
+        "data": match_count
     }
 
 def perform_heavy_db_query(keyword: str):
@@ -102,8 +108,8 @@ def level2_large_payload_slow(keyword: str):
     return {
         "payload_size": f"Large ({len(result)} records)",
         "time_ms": time_ms,
-        "data": result,
-        "cache": "BYPASS"
+        "cache": "BYPASS",
+        "data": result
     }
     
     
@@ -119,8 +125,8 @@ def level2_large_payload_fast(keyword: str):
         return {
             "payload_size": "Large (From RAM)", 
             "time_ms": time_ms,
-            "data": json.loads(cached_data), 
-            "cache": "HIT"
+            "cache": "HIT",
+            "data": json.loads(cached_data) 
         }
 
     result=perform_heavy_db_query(keyword)
@@ -129,11 +135,36 @@ def level2_large_payload_fast(keyword: str):
     time_ms = round((time.perf_counter() - start_time) * 1000, 2)
     return {"payload_size": "Large", 
             "time_ms": time_ms, 
-            "data": result, 
-            "cache": "MISS"
+            "cache": "MISS",
+            "data": result
             }
     
+@app.get("/demo/level2/memcached/{keyword}")
+def level2_large_payload_memcached(keyword: str):
+    start_time = time.perf_counter()
+    cache_key = f"level2_data_{keyword}"
     
+    cached_data = memcached_client.get(cache_key)
+    if cached_data:
+        time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        return {
+            "payload_size": "Large (From Memcached)", 
+            "time_ms": time_ms,
+            "cache": "HIT",
+            "data": json.loads(cached_data.decode('utf-8'))
+        }
+
+    result = perform_heavy_db_query(keyword)
+    
+    memcached_client.set(cache_key, json.dumps(result).encode('utf-8'), expire=time_to_expire)
+    
+    time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    return {
+        "payload_size": "Large", 
+        "time_ms": time_ms, 
+        "cache": "MISS",
+        "data": result
+    }    
     
 
 @app.post("/demo/level3/login/{username}")
