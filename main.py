@@ -5,7 +5,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 import redis
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pymemcache.client.base import Client as MemcacheClient
 
 time_to_expire = 60
@@ -193,7 +193,10 @@ def get_profile(session_token: str):
     session_data = redis_client.hgetall(f"session:{session_token}")
     
     if not session_data:
-        return {"error": "Invalid or expired session. Please login again."}
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired session. Please login again."
+        )
         
     time_ms = round((time.perf_counter() - start_time) * 1000, 2)
     return {
