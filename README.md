@@ -2,7 +2,7 @@
 
 a. Python (3.8 or newer): Download from python.org.
 
-b. Visual Studio Code (VS Code): Download from code.visualstudio.com.
+b. Visual Studio Code (VS Code): Download from code.visualstudio.com. (For convenience's sake)
 
 c. Docker Desktop: Download from docker.com.
 
