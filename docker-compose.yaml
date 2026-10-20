@@ -8,3 +8,7 @@ services:
     image: redis/redisinsight:latest
     ports:
       - "5540:5540"
+  memcached:
+    image: memcached:alpine
+    ports:
+      - "11211:11211"
