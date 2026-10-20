@@ -5,7 +5,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 import redis
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pymemcache.client.base import Client as MemcacheClient
 
 time_to_expire = 60
@@ -122,12 +122,14 @@ def level2_large_payload_fast(keyword: str):
     cached_data = redis_client.get(cache_key)
     if cached_data:
         time_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        return {
-            "payload_size": "Large (From RAM)", 
-            "time_ms": time_ms,
-            "cache": "HIT",
-            "data": json.loads(cached_data) 
-        }
+        custom_response_string = (
+            f'{{"payload_size": "Large (From RAM)", '
+            f'"time_ms": {time_ms}, '
+            f'"cache": "HIT", '
+            f'"data": {cached_data}}}'
+        )
+        
+        return Response(content=custom_response_string, media_type="application/json")
 
     result=perform_heavy_db_query(keyword)
 
