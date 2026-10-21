@@ -1,3 +1,9 @@
+# Members of the team
+
+- Huỳnh Trung Tín-524K0033
+- Trần Minh Nghĩa-524K0032
+- Phan Nguyễn Thảo Như-524V0007
+
 # Redis & Caching Seminar Demo
 
 This project is a FastAPI demonstration of SQLite queries, Redis caching,
