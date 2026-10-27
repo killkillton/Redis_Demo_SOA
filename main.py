@@ -123,7 +123,7 @@ def level2_large_payload_fast(keyword: str):
     if cached_data:
         time_ms = round((time.perf_counter() - start_time) * 1000, 2)
         custom_response_string = (
-            f'{{"payload_size": "Large (From RAM)", '
+            f'{{"payload_size": "Large (From Redis)", '
             f'"time_ms": {time_ms}, '
             f'"cache": "HIT", '
             f'"data": {cached_data}}}'
@@ -149,12 +149,14 @@ def level2_large_payload_memcached(keyword: str):
     cached_data = memcached_client.get(cache_key)
     if cached_data:
         time_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        return {
-            "payload_size": "Large (From Memcached)", 
-            "time_ms": time_ms,
-            "cache": "HIT",
-            "data": json.loads(cached_data.decode('utf-8'))
-        }
+        custom_response_string = (
+            f'{{"payload_size": "Large (From Memcached)", '
+            f'"time_ms": {time_ms}, '
+            f'"cache": "HIT", '
+            f'"data": {cached_data}}}'
+        )
+                
+        return Response(content=custom_response_string, media_type="application/json")
 
     result = perform_heavy_db_query(keyword)
     
