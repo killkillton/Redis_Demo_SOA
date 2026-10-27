@@ -149,12 +149,15 @@ def level2_large_payload_memcached(keyword: str):
     cached_data = memcached_client.get(cache_key)
     if cached_data:
         time_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        custom_response_string = (
-            f'{{"payload_size": "Large (From Memcached)", '
-            f'"time_ms": {time_ms}, '
-            f'"cache": "HIT", '
-            f'"data": {cached_data}}}'
+        cached_result = json.loads(
+            cached_data.decode("utf-8") if isinstance(cached_data, bytes) else cached_data
         )
+        custom_response_string = json.dumps({
+            "payload_size": "Large (From Memcached)",
+            "time_ms": time_ms,
+            "cache": "HIT",
+            "data": cached_result,
+        })
                 
         return Response(content=custom_response_string, media_type="application/json")
 
