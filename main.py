@@ -122,9 +122,7 @@ def clear_benchmark_history():
     return {"message": "Cleared benchmark history and flushed all caches."}
 
 
-# ==========================================================
-# LEVEL 1: SMALL PAYLOAD (Disk Scan vs RAM Lookup)
-# ==========================================================
+
 def perform_small_db_query(keyword: str):
     conn = sqlite3.connect("demo.db")
     cursor = conn.cursor()
@@ -177,9 +175,7 @@ def search_users_fast(keyword: str):
     }
 
 
-# ==========================================================
-# LEVEL 2: LARGE PAYLOAD (10,000 JSON Records + CPU Serialization)
-# ==========================================================
+
 def perform_heavy_db_query(keyword: str):
     conn = sqlite3.connect("demo.db")
     cursor = conn.cursor()
@@ -265,48 +261,48 @@ def level2_large_payload_memcached(keyword: str):
     }
 
 
-# ==========================================================
-# LEVEL 3: SESSION STORAGE (Redis Hash Structure)
-# ==========================================================
+
 @app.post("/demo/level3/login/{username}")
 def login_user(username: str):
+    psutil.cpu_percent(interval=None)
+    mem_before = process.memory_info().rss / (1024 * 1024)
     start_time = time.perf_counter()
     session_token = str(uuid.uuid4())
 
     redis_client.hset(f"session:{session_token}", mapping={
         "username": username,
         "role": "admin",
-        "login_time": time.time()
+        "login_time": time.strftime("%H:%M:%S")
     })
     redis_client.expire(f"session:{session_token}", 1800)
 
-    time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    telemetry = capture_telemetry(f"L3: Login ({username})", "WRITE", start_time, mem_before)
     return {
         "message": "Login successful",
         "session_token": session_token,
-        "redis_write_time_ms": time_ms
+        **telemetry
     }
 
 
 @app.get("/demo/level3/profile/{session_token}")
 def get_profile(session_token: str):
+    psutil.cpu_percent(interval=None)
+    mem_before = process.memory_info().rss / (1024 * 1024)
     start_time = time.perf_counter()
+    
     session_data = redis_client.hgetall(f"session:{session_token}")
 
     if not session_data:
+        capture_telemetry("L3: Profile (Invalid)", "MISS", start_time, mem_before)
         raise HTTPException(status_code=401, detail="Invalid or expired session. Please login again.")
 
-    time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    telemetry = capture_telemetry("L3: Profile (Hash Read)", "HIT", start_time, mem_before)
     return {
-        "source": "Redis Session Storage",
-        "time_ms": time_ms,
+        "source": "Redis Session Storage (Hash)",
+        **telemetry,
         "user_data": session_data
     }
 
-
-# ==========================================================
-# VISUAL TELEMETRY & BENCHMARK DASHBOARD UI
-# ==========================================================
 @app.get("/dashboard", response_class=HTMLResponse)
 def benchmark_dashboard():
     return """
@@ -402,6 +398,20 @@ def benchmark_dashboard():
             </div>
         </div>
 
+        <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-wrap gap-3 items-center">
+                <span class="text-xs font-bold uppercase text-indigo-400">Level 3 Session Hash Demo:</span>
+                <input id="login-username" type="text" placeholder="Enter username (e.g. Tin)" value="Tin_Nhom3" 
+                       class="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-xs text-white" />
+                <button onclick="loginLevel3()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded text-xs font-semibold">
+                    1. POST Login (Create Hash)
+                </button>
+                <input id="session-token-input" type="text" placeholder="Session UUID Token..." 
+                       class="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-xs text-emerald-400 w-64 font-mono" />
+                <button onclick="verifyProfileLevel3()" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded text-xs font-semibold">
+                    2. GET Profile (Verify Session)
+                </button>
+                <span id="session-result" class="text-xs font-mono text-slate-300 ml-auto">No active test</span>
+            </div>
         <script>
             const latencyCtx = document.getElementById('latencyChart').getContext('2d');
             const resourceCtx = document.getElementById('resourceChart').getContext('2d');
@@ -493,6 +503,26 @@ def benchmark_dashboard():
 
             refreshTelemetry();
             setInterval(refreshTelemetry, 3000);
+            async function loginLevel3() {
+                const user = document.getElementById('login-username').value || 'User';
+                const res = await fetch(`/demo/level3/login/${encodeURIComponent(user)}`, { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('session-token-input').value = data.session_token;
+                document.getElementById('session-result').innerText = `Logged in! Token generated in ${data.time_ms}ms`;
+                await refreshTelemetry();
+            }
+
+            async function verifyProfileLevel3() {
+                const token = document.getElementById('session-token-input').value.trim();
+                const res = await fetch(`/demo/level3/profile/${encodeURIComponent(token)}`);
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('session-result').innerText = `200 OK [${data.time_ms}ms]: user=${data.user_data.username}, role=${data.user_data.role}`;
+                } else {
+                    document.getElementById('session-result').innerText = `401 Unauthorized: ${data.detail}`;
+                }
+                await refreshTelemetry();
+            }
         </script>
     </body>
     </html>
