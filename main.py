@@ -398,7 +398,7 @@ def benchmark_dashboard():
 
             <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-wrap gap-3 items-center">
                 <span class="text-xs font-bold uppercase text-indigo-400">Level 3 Session Hash Demo:</span>
-                <input id="login-username" type="text" placeholder="Enter username (e.g. Tin)" value="Tin_Nhom3" 
+                <input id="login-username" type="text" placeholder="Enter username (e.g. Tin)" value="username1" 
                        class="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-xs text-white" />
                 <button onclick="loginLevel3()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded text-xs font-semibold">
                     1. POST Login (Create Hash)
