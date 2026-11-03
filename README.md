@@ -58,8 +58,8 @@ seminar. From the project directory:
    On startup, the application creates and seeds `demo.db` with up to
    500,000 users. The initial startup can take a few seconds.
 
-5. Open the interactive API documentation at
-   [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+5. Open the telemary dashboard at
+   [http://127.0.0.1:8000/dashboard](http://127.0.0.1:8000/dashboard).
 
 6. Open RedisInsight at [http://127.0.0.1:5540](http://127.0.0.1:5540).
 
@@ -73,17 +73,16 @@ The local services use these ports:
 
 | Service | Address |
 | --- | --- |
-| FastAPI | `http://127.0.0.1:8000` |
+| Dashboard | `http://127.0.0.1:8000/dashboard` |
 | Redis | `localhost:6379` |
 | RedisInsight | `http://127.0.0.1:5540` |
 | Memcached | `localhost:11211` |
 
 ## Part 2: Live seminar demonstration (Ngrok)
 
-In the live demonstration, the presenter will run the API, Redis, Memcached, and
-RedisInsight on the presentation computer. Ngrok exposes only the FastAPI
-application so attendees can use the public Swagger UI while the presenter
-shows RedisInsight locally.
+In the live demonstration, the presenter will run the supporting services on
+the presentation computer. Ngrok exposes the FastAPI application so attendees
+use only the public benchmark dashboard.
 
 ### Before the seminar
 
@@ -112,83 +111,88 @@ shows RedisInsight locally.
    Ngrok displays a forwarding URL similar to
    `https://example.ngrok-free.app`.
 
-6. Share only the Swagger UI URL with attendees:
-   `https://example.ngrok-free.app/docs`.
+6. Share only the Telemetry Dashboard URL with attendees:
+   `https://example.ngrok-free.app/dashboard`.
 
 Do **not** expose Redis port `6379`, Memcached port `11211`, or RedisInsight
 port `5540` through Ngrok. RedisInsight should remain open only on the
 presenter's computer at `http://127.0.0.1:5540`.
 
 The public URL changes when the Ngrok tunnel is restarted unless a reserved
-Ngrok domain is configured. Anyone with the public URL can call these demo
-endpoints while the tunnel is running, so stop Ngrok after the presentation.
+Ngrok domain is configured. Stop Ngrok after the presentation.
 
-### Live demonstration flow
+### Dashboard overview
 
-The examples below use the public Ngrok URL. Replace
-`https://example.ngrok-free.app` with the URL shown by your Ngrok terminal.
-The `cache` field identifies whether the request bypassed the cache, populated
-it, or used a cached value. Cache entries expire after 60 seconds.
+The main entry point is the live benchmark dashboard:
 
-### Level 1: Small payloads (count search)
+```text
+https://example.ngrok-free.app/dashboard
+```
 
-**Endpoints**
+Replace the example host with the forwarding URL shown by Ngrok. The
+dashboard displays:
 
-- `GET /demo/level1/nocache/{keyword}` — query SQLite directly
-- `GET /demo/level1/cached/{keyword}` — query Redis after a cache miss
+- Operating system, processor, CPU core/thread count, and CPU frequency
+- Total and current system RAM usage
+- FastAPI process RAM usage
+- Redis server RAM usage and peak usage
+- Recent benchmark history, including latency, CPU usage, cache status, and
+  memory measurements
 
-**Try it**
+The dashboard refreshes its hardware and benchmark information automatically.
+Use **Run Automated Benchmark** to run the complete Level 1 and Level 2
+comparison sequence. Use **Reset & Flush Cache** to clear the displayed
+history and reset both cache stores.
 
-1. Open `https://example.ngrok-free.app/docs`.
-2. Call `GET /demo/level1/nocache/User` and note `time_ms`.
-3. Call `GET /demo/level1/cached/User`. The first request should report
-   `cache: "MISS"`.
-4. Call it again within 60 seconds. It should report `cache: "HIT"` and
-   generally be faster.
+Each benchmark result includes a `time_ms` value and telemetry fields such
+as `cpu_percent`, `app_ram_mb`, `app_ram_delta_mb`, `redis_ram_mb`, `label`,
+and `cache`. Timings are for relative comparisons on the presentation
+computer, not fixed performance guarantees. Cache entries expire after
+60 seconds unless otherwise noted.
 
-### Level 2: Large payloads (up to 10,000 records)
+### Level 1: Small payload comparison
 
-**Endpoints**
+In the **Level 1 & 2 Triggers** panel, click:
 
-- `GET /demo/level2/nocache/{keyword}` — query SQLite directly
-- `GET /demo/level2/cached/{keyword}` — cache the JSON result in Redis
-- `GET /demo/level2/memcached/{keyword}` — cache the JSON result in Memcached
+1. **L1: No Cache (SQLite)** to record a direct database lookup.
+2. **L1: Redis Cached** twice. The first run should show `MISS`; the second
+   should show `HIT` while the cache entry is valid.
 
-The database query returns at most 10,000 matching records; it can return
-fewer if the keyword has fewer matches. Timing depends on the machine and
-should be used for relative comparisons, not as a fixed benchmark.
+Use the latency chart and telemetry table to compare the two runs. Level 1
+uses a small result containing only the number of matching users.
 
-**Try it**
+### Level 2: Large payload comparison
 
-1. Call `/demo/level2/nocache/1`.
-2. Call `/demo/level2/cached/1` twice and compare the `MISS` and `HIT` responses.
-3. Call `/demo/level2/memcached/1` twice and compare its `MISS` and `HIT`
-   responses with Redis.
-4. In the presenter's RedisInsight window, inspect the `level2:data:*` keys
-   created by the Redis example and refresh the view after each request.
+In the same panel, click:
 
-### Level 3: Session management with Redis hashes
+1. **L2: No Cache (10k JSON)** once.
+2. **L2: Redis (10k JSON)** twice to compare the initial cache population with
+   a cache hit.
+3. **L2: Memcached (10k JSON)** twice and compare its cache behavior with
+   Redis.
 
-**Endpoints**
+Level 2 measures larger JSON results containing up to 10,000 user records.
+Compare response time, CPU load, Python RAM, Redis RAM, and cache status in
+the charts and telemetry table.
 
-- `POST /demo/level3/login/{username}` — creates a Redis hash session
-- `GET /demo/level3/profile/{session_token}` — reads the session hash
+### Level 3: Session hash demonstration
 
-Sessions expire after 30 minutes.
+Use the **Level 3 Session Hash Demo** panel:
 
-**Try it**
+1. Enter a username, or keep the default value.
+2. Click **1. POST Login (Create Hash)**. The dashboard generates and fills
+   the session token automatically.
+3. Click **2. GET Profile (Verify Session)** to read the session and display
+   the result.
+4. Replace the token with an invalid value and click the verify button again
+   to demonstrate the unauthorized-session result.
 
-1. Call `POST /demo/level3/login/Alice` and copy the returned
-   `session_token`.
-2. Call `GET /demo/level3/profile/{session_token}` using that token.
-3. Try an invalid or expired token. The endpoint returns HTTP
-   `401 Unauthorized`, because the request is not authenticated.
-4. In RedisInsight, inspect the corresponding `session:{session_token}` hash
-   and its expiration.
+The session test records its timing and cache status in the telemetry
+dashboard. Sessions remain valid for 30 minutes unless they expire sooner.
 
 ### End the live demo
 
-1. Stop Ngrok with `Ctrl+C` so the public Swagger URL no longer works.
+1. Stop Ngrok with `Ctrl+C` so the public dashboard no longer works.
 2. Stop the FastAPI server with `Ctrl+C`.
 3. Stop the containers:
 

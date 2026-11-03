@@ -315,7 +315,6 @@ def benchmark_dashboard():
     </head>
     <body class="bg-slate-50 text-slate-800 p-6 font-sans">
         <div class="max-w-7xl mx-auto space-y-6">
-            <!-- Header -->
             <div class="flex justify-between items-center border-b border-slate-200 pb-4">
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900">Redis vs. SQLite: Live Hardware & Speed Telemetry</h1>
@@ -331,7 +330,6 @@ def benchmark_dashboard():
                 </div>
             </div>
 
-            <!-- Hardware Specs Banner -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <div class="text-xs font-bold text-slate-400 uppercase">OS & Architecture</div>
@@ -355,7 +353,6 @@ def benchmark_dashboard():
                 </div>
             </div>
 
-            <!-- Manual Test Triggers (Level 1 & Level 2) -->
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-2 items-center">
                 <span class="text-xs font-bold uppercase text-slate-500 mr-2">Level 1 & 2 Triggers:</span>
                 <button onclick="callApi('/demo/level1/nocache/777')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-md text-xs font-medium transition">L1: No Cache (SQLite)</button>
@@ -366,7 +363,6 @@ def benchmark_dashboard():
                 <span id="status-indicator" class="ml-auto text-xs font-medium text-slate-500">Ready</span>
             </div>
 
-            <!-- Level 3 Interactive Session Tester -->
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center">
                 <span class="text-xs font-bold uppercase text-indigo-600">Level 3 Session Hash Demo:</span>
                 <input id="login-username" type="text" placeholder="Enter username (e.g. Tin)" value="username1" 
@@ -382,7 +378,6 @@ def benchmark_dashboard():
                 <span id="session-result" class="text-xs font-mono text-slate-600 ml-auto">No active session test</span>
             </div>
 
-            <!-- Charts Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                     <h2 class="text-sm font-bold text-slate-700 mb-3">1. Execution Latency (ms) — Lower is Better</h2>
@@ -394,7 +389,6 @@ def benchmark_dashboard():
                 </div>
             </div>
 
-            <!-- Telemetry Log Table -->
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-100 text-slate-600 uppercase border-b border-slate-200">
