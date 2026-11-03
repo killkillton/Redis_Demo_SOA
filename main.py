@@ -302,7 +302,6 @@ def get_profile(session_token: str):
         **telemetry,
         "user_data": session_data
     }
-
 @app.get("/dashboard", response_class=HTMLResponse)
 def benchmark_dashboard():
     return """
@@ -314,112 +313,121 @@ def benchmark_dashboard():
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
-    <body class="bg-slate-900 text-slate-100 p-6 font-sans">
+    <body class="bg-slate-50 text-slate-800 p-6 font-sans">
         <div class="max-w-7xl mx-auto space-y-6">
-            
-            <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+            <!-- Header -->
+            <div class="flex justify-between items-center border-b border-slate-200 pb-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-white">Redis vs. SQLite: Live Hardware & Speed Telemetry</h1>
-                    <p class="text-slate-400 text-sm">Real-time CPU, RAM, and Latency Profiler (500,000 SQLite Records)</p>
+                    <h1 class="text-2xl font-bold text-slate-900">Redis vs. SQLite: Live Hardware & Speed Telemetry</h1>
+                    <p class="text-slate-500 text-sm">Real-time CPU, RAM, and Latency Profiler (500,000 SQLite Records)</p>
                 </div>
                 <div class="space-x-2">
-                    <button onclick="runFullSuite()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded font-semibold text-sm transition">
-                        ▶ Run Automated Benchmark
+                    <button onclick="runFullSuite()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-sm transition">
+                        Run Automated Benchmark
                     </button>
-                    <button onclick="clearHistory()" class="bg-rose-700 hover:bg-rose-600 px-4 py-2 rounded font-semibold text-sm transition">
+                    <button onclick="clearHistory()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-sm transition">
                         Reset & Flush Cache
                     </button>
                 </div>
             </div>
 
-            
+            <!-- Hardware Specs Banner -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <div class="text-xs text-slate-400 uppercase">OS & Architecture</div>
-                    <div id="spec-os" class="text-sm font-semibold mt-1 truncate">Loading...</div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="text-xs font-bold text-slate-400 uppercase">OS & Architecture</div>
+                    <div id="spec-os" class="text-sm font-semibold text-slate-800 mt-1 truncate">Loading...</div>
                 </div>
-                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <div class="text-xs text-slate-400 uppercase">CPU Specs</div>
-                    <div id="spec-cpu" class="text-sm font-semibold mt-1">Loading...</div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="text-xs font-bold text-slate-400 uppercase">CPU Specs</div>
+                    <div id="spec-cpu" class="text-sm font-semibold text-slate-800 mt-1">Loading...</div>
                 </div>
-                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <div class="text-xs text-slate-400 uppercase">System RAM Usage</div>
-                    <div id="spec-ram" class="text-sm font-semibold mt-1 text-sky-400">Loading...</div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="text-xs font-bold text-slate-400 uppercase">System RAM Usage</div>
+                    <div id="spec-ram" class="text-sm font-semibold mt-1 text-sky-600">Loading...</div>
                 </div>
-                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <div class="text-xs text-slate-400 uppercase">FastAPI Process RAM</div>
-                    <div id="spec-app-ram" class="text-sm font-semibold mt-1 text-amber-400">Loading...</div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="text-xs font-bold text-slate-400 uppercase">FastAPI Process RAM</div>
+                    <div id="spec-app-ram" class="text-sm font-semibold mt-1 text-amber-600">Loading...</div>
                 </div>
-                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <div class="text-xs text-slate-400 uppercase">Redis Engine RAM</div>
-                    <div id="spec-redis-ram" class="text-sm font-semibold mt-1 text-emerald-400">Loading...</div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="text-xs font-bold text-slate-400 uppercase">Redis Engine RAM</div>
+                    <div id="spec-redis-ram" class="text-sm font-semibold mt-1 text-emerald-600">Loading...</div>
                 </div>
             </div>
 
-            <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-wrap gap-2 items-center">
-                <span class="text-xs font-bold uppercase text-slate-400 mr-2">Trigger Test:</span>
-                <button onclick="callApi('/demo/level1/nocache/777')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs">L1: No Cache (SQLite)</button>
-                <button onclick="callApi('/demo/level1/cached/777')" class="bg-indigo-700 hover:bg-indigo-600 px-3 py-1.5 rounded text-xs">L1: Redis Cached</button>
-                <button onclick="callApi('/demo/level2/nocache/1')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-xs">L2: No Cache (10k JSON)</button>
-                <button onclick="callApi('/demo/level2/cached/1')" class="bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded text-xs">L2: Redis (10k JSON)</button>
-                <button onclick="callApi('/demo/level2/memcached/1')" class="bg-amber-700 hover:bg-amber-600 px-3 py-1.5 rounded text-xs">L2: Memcached (10k JSON)</button>
-                <span id="status-indicator" class="ml-auto text-xs text-slate-400">Ready</span>
+            <!-- Manual Test Triggers (Level 1 & Level 2) -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-2 items-center">
+                <span class="text-xs font-bold uppercase text-slate-500 mr-2">Level 1 & 2 Triggers:</span>
+                <button onclick="callApi('/demo/level1/nocache/777')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-md text-xs font-medium transition">L1: No Cache (SQLite)</button>
+                <button onclick="callApi('/demo/level1/cached/777')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-md text-xs font-semibold transition">L1: Redis Cached</button>
+                <button onclick="callApi('/demo/level2/nocache/1')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-md text-xs font-medium transition">L2: No Cache (10k JSON)</button>
+                <button onclick="callApi('/demo/level2/cached/1')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-md text-xs font-semibold transition">L2: Redis (10k JSON)</button>
+                <button onclick="callApi('/demo/level2/memcached/1')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-md text-xs font-semibold transition">L2: Memcached (10k JSON)</button>
+                <span id="status-indicator" class="ml-auto text-xs font-medium text-slate-500">Ready</span>
             </div>
 
-            
+            <!-- Level 3 Interactive Session Tester -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center">
+                <span class="text-xs font-bold uppercase text-indigo-600">Level 3 Session Hash Demo:</span>
+                <input id="login-username" type="text" placeholder="Enter username (e.g. Tin)" value="username1" 
+                       class="bg-slate-50 border border-slate-300 rounded-md px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500" />
+                <button onclick="loginLevel3()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm transition">
+                    1. POST Login (Create Hash)
+                </button>
+                <input id="session-token-input" type="text" placeholder="Session UUID Token..." 
+                       class="bg-slate-50 border border-slate-300 rounded-md px-3 py-1.5 text-xs text-emerald-700 w-64 font-mono focus:outline-none focus:border-emerald-500" />
+                <button onclick="verifyProfileLevel3()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm transition">
+                    2. GET Profile (Verify Session)
+                </button>
+                <span id="session-result" class="text-xs font-mono text-slate-600 ml-auto">No active session test</span>
+            </div>
+
+            <!-- Charts Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <h2 class="text-sm font-bold text-slate-300 mb-3">1. Execution Latency (ms) — Lower is Better</h2>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-700 mb-3">1. Execution Latency (ms) — Lower is Better</h2>
                     <canvas id="latencyChart" height="180"></canvas>
                 </div>
-                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                    <h2 class="text-sm font-bold text-slate-300 mb-3">2. CPU Load (%) & Redis RAM Footprint (MB)</h2>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h2 class="text-sm font-bold text-slate-700 mb-3">2. CPU Load (%) & Redis RAM Footprint (MB)</h2>
                     <canvas id="resourceChart" height="180"></canvas>
                 </div>
             </div>
 
-            
-            <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+            <!-- Telemetry Log Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-950 text-slate-400 uppercase">
+                    <thead class="bg-slate-100 text-slate-600 uppercase border-b border-slate-200">
                         <tr>
-                            <th class="p-3">Time</th>
-                            <th class="p-3">Endpoint Scenario</th>
-                            <th class="p-3">Cache Status</th>
-                            <th class="p-3">Response Time (ms)</th>
-                            <th class="p-3">CPU Spike (%)</th>
-                            <th class="p-3">Python RAM (MB)</th>
-                            <th class="p-3">Redis RAM Used (MB)</th>
+                            <th class="p-3 font-bold">Time</th>
+                            <th class="p-3 font-bold">Endpoint Scenario</th>
+                            <th class="p-3 font-bold">Cache Status</th>
+                            <th class="p-3 font-bold">Response Time (ms)</th>
+                            <th class="p-3 font-bold">CPU Spike (%)</th>
+                            <th class="p-3 font-bold">Python RAM (MB)</th>
+                            <th class="p-3 font-bold">Redis RAM Used (MB)</th>
                         </tr>
                     </thead>
-                    <tbody id="telemetry-table" class="divide-y divide-slate-700"></tbody>
+                    <tbody id="telemetry-table" class="divide-y divide-slate-200"></tbody>
                 </table>
             </div>
-
-            <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-wrap gap-3 items-center">
-                <span class="text-xs font-bold uppercase text-indigo-400">Level 3 Session Hash Demo:</span>
-                <input id="login-username" type="text" placeholder="Enter username (e.g. Tin)" value="username1" 
-                       class="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-xs text-white" />
-                <button onclick="loginLevel3()" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded text-xs font-semibold">
-                    1. POST Login (Create Hash)
-                </button>
-                <input id="session-token-input" type="text" placeholder="Session UUID Token..." 
-                       class="bg-slate-900 border border-slate-600 rounded px-3 py-1 text-xs text-emerald-400 w-64 font-mono" />
-                <button onclick="verifyProfileLevel3()" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded text-xs font-semibold">
-                    2. GET Profile (Verify Session)
-                </button>
-                <span id="session-result" class="text-xs font-mono text-slate-300 ml-auto">No active test</span>
-            </div>
         </div>
-            
+
         <script>
+            Chart.defaults.color = '#475569';
+            Chart.defaults.borderColor = '#e2e8f0';
+
             const latencyCtx = document.getElementById('latencyChart').getContext('2d');
             const resourceCtx = document.getElementById('resourceChart').getContext('2d');
 
             const latencyChart = new Chart(latencyCtx, {
                 type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Response Time (ms)', data: [], backgroundColor: [] }] },
-                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' } } } }
+                data: { labels: [], datasets: [{ label: 'Response Time (ms)', data: [], backgroundColor: [], borderRadius: 4 }] },
+                options: { 
+                    responsive: true, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' } }, x: { grid: { display: false } } } 
+                }
             });
 
             const resourceChart = new Chart(resourceCtx, {
@@ -427,11 +435,14 @@ def benchmark_dashboard():
                 data: {
                     labels: [],
                     datasets: [
-                        { label: 'CPU Usage (%)', data: [], backgroundColor: '#f59e0b' },
-                        { label: 'Redis RAM (MB)', data: [], backgroundColor: '#10b981' }
+                        { label: 'CPU Usage (%)', data: [], backgroundColor: '#f59e0b', borderRadius: 4 },
+                        { label: 'Redis RAM (MB)', data: [], backgroundColor: '#10b981', borderRadius: 4 }
                     ]
                 },
-                options: { responsive: true, scales: { y: { beginAtZero: true, grid: { color: '#334155' } } } }
+                options: { 
+                    responsive: true, 
+                    scales: { y: { beginAtZero: true, grid: { color: '#e2e8f0' } }, x: { grid: { display: false } } } 
+                }
             });
 
             async function refreshTelemetry() {
@@ -448,7 +459,7 @@ def benchmark_dashboard():
                 latencyChart.data.labels = history.map(h => `${h.label} [${h.cache}]`);
                 latencyChart.data.datasets[0].data = history.map(h => h.time_ms);
                 latencyChart.data.datasets[0].backgroundColor = history.map(h =>
-                    h.cache === 'HIT' ? '#10b981' : (h.cache === 'MISS' ? '#f59e0b' : '#ef4444')
+                    (h.cache === 'HIT' || h.cache === 'WRITE') ? '#10b981' : (h.cache === 'MISS' ? '#f59e0b' : '#ef4444')
                 );
                 latencyChart.update();
 
@@ -458,17 +469,25 @@ def benchmark_dashboard():
                 resourceChart.update();
 
                 const tbody = document.getElementById('telemetry-table');
-                tbody.innerHTML = history.slice().reverse().map(h => `
-                    <tr class="hover:bg-slate-750">
-                        <td class="p-3 text-slate-400">${h.timestamp}</td>
-                        <td class="p-3 font-semibold">${h.label}</td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${h.cache === 'HIT' ? 'bg-emerald-900 text-emerald-300' : (h.cache === 'MISS' ? 'bg-amber-900 text-amber-300' : 'bg-rose-900 text-rose-300')}">${h.cache}</span></td>
-                        <td class="p-3 font-mono font-bold ${h.cache === 'HIT' ? 'text-emerald-400' : 'text-rose-400'}">${h.time_ms} ms</td>
-                        <td class="p-3 font-mono">${h.cpu_percent}%</td>
-                        <td class="p-3 font-mono">${h.app_ram_mb} MB (+${h.app_ram_delta_mb} MB)</td>
-                        <td class="p-3 font-mono text-emerald-400">${h.redis_ram_mb} MB</td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = history.slice().reverse().map(h => {
+                    const isFast = h.cache === 'HIT' || h.cache === 'WRITE';
+                    const badgeClass = isFast 
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                        : (h.cache === 'MISS' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-rose-100 text-rose-800 border border-rose-200');
+                    const timeColor = isFast ? 'text-emerald-600' : 'text-rose-600';
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 text-slate-500">${h.timestamp}</td>
+                            <td class="p-3 font-semibold text-slate-800">${h.label}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${h.cache}</span></td>
+                            <td class="p-3 font-mono font-bold ${timeColor}">${h.time_ms} ms</td>
+                            <td class="p-3 font-mono text-slate-700">${h.cpu_percent}%</td>
+                            <td class="p-3 font-mono text-slate-700">${h.app_ram_mb} MB (+${h.app_ram_delta_mb} MB)</td>
+                            <td class="p-3 font-mono font-semibold text-emerald-600">${h.redis_ram_mb} MB</td>
+                        </tr>
+                    `;
+                }).join('');
             }
 
             async function callApi(url) {
@@ -478,8 +497,40 @@ def benchmark_dashboard():
                 document.getElementById('status-indicator').innerText = 'Completed';
             }
 
+            async function loginLevel3() {
+                const user = document.getElementById('login-username').value || 'User';
+                const res = await fetch(`/demo/level3/login/${encodeURIComponent(user)}`, { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('session-token-input').value = data.session_token;
+                document.getElementById('session-result').className = 'text-xs font-mono text-emerald-600 font-semibold ml-auto';
+                document.getElementById('session-result').innerText = `Logged in! Token generated in ${data.time_ms}ms`;
+                await refreshTelemetry();
+            }
+
+            async function verifyProfileLevel3() {
+                const token = document.getElementById('session-token-input').value.trim();
+                if (!token) {
+                    document.getElementById('session-result').className = 'text-xs font-mono text-rose-600 font-semibold ml-auto';
+                    document.getElementById('session-result').innerText = 'Please enter or generate a token first!';
+                    return;
+                }
+                const res = await fetch(`/demo/level3/profile/${encodeURIComponent(token)}`);
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('session-result').className = 'text-xs font-mono text-emerald-600 font-semibold ml-auto';
+                    document.getElementById('session-result').innerText = `200 OK [${data.time_ms}ms]: user=${data.user_data.username}, role=${data.user_data.role}`;
+                } else {
+                    document.getElementById('session-result').className = 'text-xs font-mono text-rose-600 font-semibold ml-auto';
+                    document.getElementById('session-result').innerText = `401 Unauthorized: ${data.detail}`;
+                }
+                await refreshTelemetry();
+            }
+
             async function clearHistory() {
                 await fetch('/system/clear-history', { method: 'POST' });
+                document.getElementById('session-token-input').value = '';
+                document.getElementById('session-result').className = 'text-xs font-mono text-slate-600 ml-auto';
+                document.getElementById('session-result').innerText = 'Cache & History Cleared';
                 await refreshTelemetry();
             }
 
@@ -503,26 +554,6 @@ def benchmark_dashboard():
 
             refreshTelemetry();
             setInterval(refreshTelemetry, 3000);
-            async function loginLevel3() {
-                const user = document.getElementById('login-username').value || 'User';
-                const res = await fetch(`/demo/level3/login/${encodeURIComponent(user)}`, { method: 'POST' });
-                const data = await res.json();
-                document.getElementById('session-token-input').value = data.session_token;
-                document.getElementById('session-result').innerText = `Logged in! Token generated in ${data.time_ms}ms`;
-                await refreshTelemetry();
-            }
-
-            async function verifyProfileLevel3() {
-                const token = document.getElementById('session-token-input').value.trim();
-                const res = await fetch(`/demo/level3/profile/${encodeURIComponent(token)}`);
-                const data = await res.json();
-                if (res.ok) {
-                    document.getElementById('session-result').innerText = `200 OK [${data.time_ms}ms]: user=${data.user_data.username}, role=${data.user_data.role}`;
-                } else {
-                    document.getElementById('session-result').innerText = `401 Unauthorized: ${data.detail}`;
-                }
-                await refreshTelemetry();
-            }
         </script>
     </body>
     </html>
