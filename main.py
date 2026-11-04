@@ -18,7 +18,6 @@ redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
 memcached_client = MemcacheClient(('localhost', 11211))
 process = psutil.Process(os.getpid())
 
-# Store live benchmark runs for the visual dashboard
 benchmark_history = []
 
 
@@ -57,15 +56,12 @@ def capture_telemetry(label: str, cache_status: str, start_time: float, mem_befo
     """Measures execution time, CPU load, Process RAM, and Redis RAM usage."""
     time_ms = round((time.perf_counter() - start_time) * 1000, 2)
     
-    # System CPU usage during the call
     cpu_usage = psutil.cpu_percent(interval=None)
     
-    # FastAPI Python Process RAM (MB)
     mem_after = process.memory_info().rss / (1024 * 1024)
     app_ram_mb = round(mem_after, 2)
     app_ram_delta_mb = round(max(0.0, mem_after - mem_before), 2)
     
-    # Redis Server RAM (MB) queried directly from Redis Engine
     try:
         redis_info = redis_client.info("memory")
         redis_ram_mb = round(redis_info.get("used_memory", 0) / (1024 * 1024), 2)
@@ -302,6 +298,8 @@ def get_profile(session_token: str):
         **telemetry,
         "user_data": session_data
     }
+    
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def benchmark_dashboard():
     return """
